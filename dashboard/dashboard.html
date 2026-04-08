@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>FloodWatch — Dashboard</title>
+  <link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+
+<!-- Navigation -->
+<nav class="nav">
+  <div class="nav-brand">
+    <div class="brand-icon">🌊</div>
+    FloodWatch
+  </div>
+  <div class="nav-links">
+    <a class="nav-link" href="index.html" data-page="index.html">Home</a>
+    <a class="nav-link active" href="dashboard.html" data-page="dashboard.html">Dashboard</a>
+    <a class="nav-link" href="analytics.html" data-page="analytics.html">Analytics</a>
+  </div>
+  <div class="nav-status">
+    <div id="status-dot" class="status-dot"></div>
+    <span id="status-text">Connecting…</span>
+  </div>
+</nav>
+
+<!-- Page -->
+<div class="page">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Live Monitoring</div>
+      <div class="page-subtitle">Node-level flood risk · Updated every 3 s</div>
+    </div>
+    <div class="timestamp" id="last-updated">—</div>
+  </div>
+
+  <!-- Metric summary row -->
+  <div class="metrics-row">
+    <div class="metric-card green">
+      <div class="metric-label">Safe nodes</div>
+      <div class="metric-value" id="count-green">—</div>
+      <div class="metric-sub">No action needed</div>
+    </div>
+    <div class="metric-card yellow">
+      <div class="metric-label">Warning nodes</div>
+      <div class="metric-value" id="count-yellow">—</div>
+      <div class="metric-sub">Monitor closely</div>
+    </div>
+    <div class="metric-card red">
+      <div class="metric-label">Flood nodes</div>
+      <div class="metric-value" id="count-red">—</div>
+      <div class="metric-sub">Immediate action</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Total nodes</div>
+      <div class="metric-value">15</div>
+      <div class="metric-sub">N1 – N15</div>
+    </div>
+  </div>
+
+  <!-- Main dashboard layout -->
+  <div class="dashboard-grid">
+
+    <!-- Left: node grid + detail -->
+    <div>
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">NODE STATUS MAP</span>
+          <span class="badge badge-blue" id="live-badge">LIVE</span>
+        </div>
+        <div class="panel-body">
+          <div class="node-grid" id="node-grid">
+            <!-- Nodes inserted by JS -->
+          </div>
+
+          <!-- Node detail panel (shown on click) -->
+          <div class="detail-panel" id="detail-panel">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="detail-title" id="detail-node-name">—</span>
+              <span id="detail-badge"></span>
+            </div>
+            <div id="detail-rows"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: alerts panel -->
+    <div>
+      <div class="panel" style="margin-bottom:16px">
+        <div class="panel-header">
+          <span class="panel-title">ACTIVE ALERTS</span>
+          <span class="badge badge-red" id="alert-count" style="display:none">0</span>
+        </div>
+        <div class="panel-body" style="padding:12px">
+          <div class="alert-list" id="alert-list">
+            <div class="alert-empty">
+              <div class="checkmark">✓</div>
+              Waiting for data…
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Risk distribution bar -->
+      <div class="panel">
+        <div class="panel-header"><span class="panel-title">RISK DISTRIBUTION</span></div>
+        <div class="panel-body">
+          <div style="margin-bottom:10px">
+            <div class="flex items-center gap-2 mb-1">
+              <span style="color:var(--green);font-size:11px;width:60px">SAFE</span>
+              <div style="flex:1;height:8px;background:var(--bg-base);border-radius:4px;overflow:hidden">
+                <div id="bar-green" style="height:100%;background:var(--green);border-radius:4px;transition:width .5s;width:0%"></div>
+              </div>
+              <span style="font-size:11px;color:var(--text-secondary);width:30px;text-align:right" id="pct-green">0%</span>
+            </div>
+            <div class="flex items-center gap-2 mb-1">
+              <span style="color:var(--yellow);font-size:11px;width:60px">WARNING</span>
+              <div style="flex:1;height:8px;background:var(--bg-base);border-radius:4px;overflow:hidden">
+                <div id="bar-yellow" style="height:100%;background:var(--yellow);border-radius:4px;transition:width .5s;width:0%"></div>
+              </div>
+              <span style="font-size:11px;color:var(--text-secondary);width:30px;text-align:right" id="pct-yellow">0%</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span style="color:var(--red);font-size:11px;width:60px">FLOOD</span>
+              <div style="flex:1;height:8px;background:var(--bg-base);border-radius:4px;overflow:hidden">
+                <div id="bar-red" style="height:100%;background:var(--red);border-radius:4px;transition:width .5s;width:0%"></div>
+              </div>
+              <span style="font-size:11px;color:var(--text-secondary);width:30px;text-align:right" id="pct-red">0%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+<script>
+// ── Build initial node grid ────────────────────────────────────────────
+function buildNodeGrid() {
+  const grid = document.getElementById("node-grid");
+  NODES.forEach(node => {
+    const card = document.createElement("div");
+    card.className = "node-card animate-in";
+    card.id = `node-${node}`;
+    card.innerHTML = `
+      <div class="node-name">${node}</div>
+      <div class="node-status">—</div>
+    `;
+    card.addEventListener("click", () => selectNode(node));
+    grid.appendChild(card);
+  });
+}
+
+// ── Update all node cards ──────────────────────────────────────────────
+function updateNodeGrid(preds) {
+  NODES.forEach(node => {
+    const card = document.getElementById(`node-${node}`);
+    if (!card) return;
+    const color = preds[node] || "UNKNOWN";
+    card.className = `node-card ${color}`;
+    if (state.selectedNode === node) card.classList.add("selected");
+    card.querySelector(".node-status").textContent = COLOR_LABELS[color] || color;
+  });
+}
+
+// ── Node detail ────────────────────────────────────────────────────────
+function selectNode(node) {
+  state.selectedNode = node;
+
+  // Highlight selected
+  NODES.forEach(n => {
+    const c = document.getElementById(`node-${n}`);
+    if (c) c.classList.toggle("selected", n === node);
+  });
+
+  const panel = document.getElementById("detail-panel");
+  const color = state.predictions[node] || "UNKNOWN";
+  panel.classList.add("visible");
+  document.getElementById("detail-node-name").textContent = node;
+  document.getElementById("detail-badge").innerHTML = badgeHtml(color);
+
+  // Last mock snapshot values
+  const snap = generateMockSnapshot()[node];
+  const rows = document.getElementById("detail-rows");
+  rows.innerHTML = [
+    ["Status",        COLOR_LABELS[color] || color],
+    ["Rainfall",      `${snap.rainfall.toFixed(1)} mm/h`],
+    ["Humidity",      `${(snap.humidity * 100).toFixed(0)}%`],
+    ["Cloud density", snap.cloud_density.toFixed(2)],
+    ["Water level",   `${snap.water_level.toFixed(2)} m`],
+    ["Rate of rise",  `${snap.rate_of_rise.toFixed(3)} m/s`],
+  ].map(([k, v]) => `
+    <div class="detail-row">
+      <span class="detail-key">${k}</span>
+      <span class="detail-val">${v}</span>
+    </div>
+  `).join("");
+}
+
+// ── Update metrics & alerts ────────────────────────────────────────────
+function updateMetrics(preds) {
+  const counts = statusCounts(preds);
+  document.getElementById("count-green").textContent  = counts.GREEN;
+  document.getElementById("count-yellow").textContent = counts.YELLOW;
+  document.getElementById("count-red").textContent    = counts.RED;
+
+  const total = NODES.length;
+  ["green","yellow","red"].forEach(c => {
+    const key = c.toUpperCase();
+    const pct = Math.round((counts[key] / total) * 100);
+    document.getElementById(`bar-${c}`).style.width  = pct + "%";
+    document.getElementById(`pct-${c}`).textContent  = pct + "%";
+  });
+
+  // Alerts
+  const alertList = document.getElementById("alert-list");
+  const alertBadge = document.getElementById("alert-count");
+  const alertNodes = NODES.filter(n => preds[n] === "RED" || preds[n] === "YELLOW");
+
+  if (alertNodes.length === 0) {
+    alertList.innerHTML = `<div class="alert-empty"><div class="checkmark">✓</div>All nodes nominal</div>`;
+    alertBadge.style.display = "none";
+  } else {
+    alertBadge.style.display = "inline-block";
+    alertBadge.textContent   = alertNodes.length;
+    alertList.innerHTML = alertNodes.sort((a, b) => {
+      const pri = { RED: 0, YELLOW: 1 };
+      return (pri[preds[a]] ?? 2) - (pri[preds[b]] ?? 2);
+    }).map(node => {
+      const color = preds[node];
+      return `
+        <div class="alert-item ${color}">
+          <div class="alert-dot"></div>
+          <div>
+            <strong>${node}</strong> — ${COLOR_LABELS[color]}
+            <div class="text-sm" style="opacity:.7;margin-top:2px">${formatTime(new Date())}</div>
+          </div>
+        </div>`;
+    }).join("");
+  }
+}
+
+// ── Main update ────────────────────────────────────────────────────────
+function onUpdate(preds) {
+  updateNodeGrid(preds);
+  updateMetrics(preds);
+  setNavStatus(true);
+  document.getElementById("last-updated").textContent = `Updated: ${formatTime(new Date())}`;
+
+  if (state.selectedNode) selectNode(state.selectedNode);
+}
+
+// ── Boot ───────────────────────────────────────────────────────────────
+document.addEventListener("DOMContentLoaded", () => {
+  buildNodeGrid();
+  startPolling(onUpdate);
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>FloodWatch — Flood Prediction System</title>
+  <link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+
+<!-- Navigation -->
+<nav class="nav">
+  <div class="nav-brand">
+    <div class="brand-icon">🌊</div>
+    FloodWatch
+  </div>
+  <div class="nav-links">
+    <a class="nav-link active" href="index.html" data-page="index.html">Home</a>
+    <a class="nav-link" href="dashboard.html" data-page="dashboard.html">Dashboard</a>
+    <a class="nav-link" href="analytics.html" data-page="analytics.html">Analytics</a>
+  </div>
+  <div class="nav-status">
+    <div id="status-dot" class="status-dot"></div>
+    <span id="status-text">Connecting…</span>
+  </div>
+</nav>
+
+<!-- Hero -->
+<main class="hero">
+  <div style="margin-bottom:24px">
+    <span class="badge badge-blue" style="font-size:11px;padding:4px 12px;margin-bottom:16px;display:inline-block">
+      GCN + LSTM · Real-time Inference
+    </span>
+  </div>
+
+  <h1 class="hero-title">
+    Predict Flood Risk<br/>
+    Across <span>15 Drainage Nodes</span>
+  </h1>
+
+  <p class="hero-subtitle">
+    Graph Convolutional Network + LSTM model analyses rainfall, humidity,
+    water level and flow rate to classify each node as SAFE, WARNING, or FLOOD.
+  </p>
+
+  <div class="hero-btns">
+    <a href="dashboard.html" class="btn-primary">Open Dashboard</a>
+    <a href="analytics.html" class="btn-secondary">View Analytics</a>
+  </div>
+
+  <div class="hero-grid">
+    <div class="hero-stat">
+      <div class="hero-stat-val">15</div>
+      <div class="hero-stat-label">Drainage nodes monitored</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-val">5</div>
+      <div class="hero-stat-label">Sensor features per node</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-val">3s</div>
+      <div class="hero-stat-label">Prediction refresh rate</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-val">3</div>
+      <div class="hero-stat-label">Risk classes: Safe / Warning / Flood</div>
+    </div>
+  </div>
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>
