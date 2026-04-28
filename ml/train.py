@@ -76,7 +76,7 @@ def train():
     # ── 4. Training loop ─────────────────────────────────────────────────
     best_val_loss = float("inf")
     print(f"\n{'Epoch':>6}  {'Train Loss':>11}  {'Val Loss':>9}  {'Val Acc':>8}")
-    print("─" * 48)
+    print("-" * 48)
 
     for epoch in range(1, EPOCHS + 1):
         # — Train —

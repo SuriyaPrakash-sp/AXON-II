@@ -10,7 +10,7 @@ Usage in routes.py:
 import sys
 from pathlib import Path
 
-# Allow importing from ml/ directory
+# Allow importing from ml/ directory (sibling of backend/)
 ML_DIR = Path(__file__).parent.parent / "ml"
 sys.path.insert(0, str(ML_DIR))
 
@@ -47,8 +47,17 @@ class ModelBundle:
 
 
 def get_model_bundle() -> ModelBundle:
-    """Return the singleton ModelBundle, initialising it on first call."""
+    """
+    Return the singleton ModelBundle, initialising it on first call.
+    Raises a clear error if model.pth is missing.
+    """
     global _bundle
     if _bundle is None:
+        model_pth = ML_DIR / "model.pth"
+        if not model_pth.exists():
+            raise FileNotFoundError(
+                f"model.pth not found at {model_pth}. "
+                "Run  python ml/train.py  first to train and save the model."
+            )
         _bundle = ModelBundle()
     return _bundle

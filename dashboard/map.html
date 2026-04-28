@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FloodWatch — Node Map</title>
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+</head>
+
+<body>
+
+    <!-- Navigation -->
+    <nav class="nav">
+        <div class="nav-brand">
+            <div class="brand-icon">🌊</div>
+            <span class="brand-name">FloodWatch</span>
+        </div>
+        <div class="nav-links">
+            <a class="nav-link" href="index.html">Home</a>
+            <a class="nav-link" href="dashboard.html">Dashboard</a>
+            <a class="nav-link active" href="map.html">Map</a>
+            <a class="nav-link" href="analytics.html">Analytics</a>
+            <a class="nav-link" href="sos.html">SOS Tracking</a>
+        </div>
+        <div class="nav-status">
+            <div id="status-dot" class="status-dot"></div>
+            <span id="status-text">Connecting…</span>
+        </div>
+    </nav>
+
+    <div class="page">
+        <div class="page-header">
+            <div>
+                <div class="page-title">Geographic Node Map</div>
+                <div class="page-subtitle">15 drainage nodes distributed across Chennai city</div>
+            </div>
+            <div class="timestamp" id="last-updated">—</div>
+        </div>
+
+        <div class="map-container">
+            <!-- Map will be inserted here -->
+            <div id="map"
+                style="width:100%;height:600px;border-radius:8px;border:1px solid var(--border);overflow:hidden;"></div>
+        </div>
+
+        <!-- Legend and Node List -->
+        <div class="map-controls">
+            <div class="panel" style="margin-top:20px">
+                <div class="panel-header">
+                    <span class="panel-title">NODE LOCATIONS & STATUS</span>
+                </div>
+                <div class="panel-body" style="max-height:400px;overflow-y:auto">
+                    <table style="width:100%;border-collapse:collapse;font-size:12px" id="nodes-table">
+                        <thead>
+                            <tr>
+                                <th
+                                    style="text-align:left;padding:8px 12px;color:var(--text-secondary);font-weight:600;border-bottom:1px solid var(--border)">
+                                    Node</th>
+                                <th
+                                    style="text-align:left;padding:8px 12px;color:var(--text-secondary);font-weight:600;border-bottom:1px solid var(--border)">
+                                    Location</th>
+                                <th
+                                    style="padding:8px 12px;color:var(--text-secondary);font-weight:600;border-bottom:1px solid var(--border)">
+                                    Status</th>
+                                <th
+                                    style="padding:8px 12px;color:var(--text-secondary);font-weight:600;border-bottom:1px solid var(--border)">
+                                    Water Level</th>
+                            </tr>
+                        </thead>
+                        <tbody id="nodes-list">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+    <script src="app.js"></script>
+    <script>
+        let map = null;
+        let markers = {};
+        let circleMarkers = {};
+
+        // Chennai city center coordinates
+        const CHENNAI_CENTER = [13.0827, 80.2707];
+
+        // Node positions (realistic distribution across Chennai)
+        // These are spread across the city's major drainage basins
+        const NODE_LOCATIONS = {
+            "N1": { lat: 13.0827, lng: 80.2707, area: "Central Chennai (Cooum River)" },
+            "N2": { lat: 13.0033, lng: 80.2675, area: "Adyar Estuary" },
+            "N3": { lat: 12.7870, lng: 80.2211, area: "Kelambakkam Area" },
+            "N4": { lat: 13.0776, lng: 80.2570, area: "Napier Park" },
+            "N5": { lat: 13.0186, lng: 80.2868, area: "Foreshore Estate" },
+            "N6": { lat: 13.0962, lng: 80.2288, area: "Kailasanathar Temple" },
+            "N7": { lat: 13.0373, lng: 80.2123, area: "Ashok Nagar" },
+            "N8": { lat: 13.1162, lng: 80.2320, area: "Perambur" },
+            "N9": { lat: 13.0325, lng: 80.2696, area: "Mylapore" },
+            "N10": { lat: 13.0237, lng: 80.2282, area: "Saidapet" },
+            "N11": { lat: 13.0069, lng: 80.2668, area: "Elliot's Beach" },
+            "N12": { lat: 13.0586, lng: 80.2756, area: "Thiruvallikkeni" },
+            "N13": { lat: 13.0495, lng: 80.2562, area: "Cathedral Road" },
+            "N14": { lat: 13.1586, lng: 80.3027, area: "Kaladipet" },
+            "N15": { lat: 13.0330, lng: 80.2785, area: "San Thome" }
+        };
+
+        // ── Initialize Map ────────────────────────────────────────────────────
+        function initMap() {
+            map = L.map('map').setView(CHENNAI_CENTER, 13);
+
+            // Add tile layer (OpenStreetMap)
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors',
+                maxZoom: 19,
+                style: 'color:#8a9ab5'
+            }).addTo(map);
+
+            // Create markers for all nodes
+            NODES.forEach(node => {
+                const loc = NODE_LOCATIONS[node];
+                if (!loc) return;
+
+                // Create marker
+                const markerEl = document.createElement('div');
+                markerEl.id = `marker-${node}`;
+                markerEl.style.cssText = `
+          width:40px;height:40px;
+          background:#38bdf8;
+          border:2px solid white;
+          border-radius:50%;
+          display:flex;align-items:center;justify-content:center;
+          font-weight:700;color:white;font-size:12px;
+          cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.3);
+          transition:all 0.2s;
+        `;
+                markerEl.textContent = node;
+
+                const marker = L.marker([loc.lat, loc.lng], {
+                    icon: L.divIcon({
+                        html: markerEl,
+                        iconSize: [40, 40],
+                        className: 'custom-marker'
+                    })
+                }).bindPopup(`
+          <div style="font-size:12px;min-width:150px">
+            <strong>${node}</strong><br/>
+            <small style="color:#8a9ab5">${loc.area}</small><br/>
+            <div id="popup-status-${node}" style="margin-top:4px;"></div>
+          </div>
+        `).addTo(map);
+
+                marker.on('click', () => {
+                    selectNodeFromMap(node);
+                });
+
+                markers[node] = { marker, element: markerEl };
+            });
+        }
+
+        // ── Update Node Status ────────────────────────────────────────────────
+        function updateNodeStatus(preds) {
+            NODES.forEach(node => {
+                const status = preds[node] || "UNKNOWN";
+                const marker = markers[node];
+                if (!marker) return;
+
+                // Update marker color
+                let bgColor = "#38bdf8"; // Blue for unknown
+                if (status === "GREEN") bgColor = "#22c55e";
+                if (status === "YELLOW") bgColor = "#eab308";
+                if (status === "RED") bgColor = "#ef4444";
+
+                marker.element.style.background = bgColor;
+                marker.element.style.boxShadow = `0 2px 12px ${bgColor}66`;
+
+                // Update popup
+                const popupEl = document.getElementById(`popup-status-${node}`);
+                if (popupEl) {
+                    popupEl.innerHTML = badgeHtml(status);
+                }
+            });
+
+            // Update nodes list table
+            updateNodesListTable(preds);
+        }
+
+        // ── Update nodes list table ───────────────────────────────────────────
+        function updateNodesListTable(preds) {
+            const tbody = document.getElementById("nodes-list");
+            const rows = NODES.map(node => {
+                const loc = NODE_LOCATIONS[node];
+                const status = preds[node] || "UNKNOWN";
+                const snap = generateMockSnapshot()[node];
+                const rowBg = status === "RED" ? "rgba(239,68,68,0.05)" : status === "YELLOW" ? "rgba(234,179,8,0.05)" : "";
+
+                return `<tr style="background:${rowBg};border-bottom:1px solid var(--border);cursor:pointer" onclick="scrollToNode('${node}')">
+          <td style="padding:8px 12px;font-weight:600;color:var(--text-primary)">${node}</td>
+          <td style="padding:8px 12px;font-size:11px;color:var(--text-secondary)">${loc.area}</td>
+          <td style="padding:8px 12px;text-align:center">${badgeHtml(status)}</td>
+          <td style="padding:8px 12px;text-align:center;font-family:monospace;color:var(--text-secondary)">${snap.water_level.toFixed(2)}m</td>
+        </tr>`;
+            }).join("");
+            tbody.innerHTML = rows;
+        }
+
+        // ── Select node from map ──────────────────────────────────────────────
+        function selectNodeFromMap(node) {
+            const loc = NODE_LOCATIONS[node];
+            if (!loc) return;
+
+            // Center map on node
+            map.setView([loc.lat, loc.lng], 15);
+
+            // Open popup
+            if (markers[node]) {
+                markers[node].marker.openPopup();
+            }
+        }
+
+        // ── Scroll to node in table ───────────────────────────────────────────
+        function scrollToNode(node) {
+            selectNodeFromMap(node);
+        }
+
+        // ── Main update callback ──────────────────────────────────────────────
+        function onUpdate(preds) {
+            updateNodeStatus(preds);
+            setNavStatus(true);
+            document.getElementById("last-updated").textContent = `Updated: ${formatTime(new Date())}`;
+        }
+
+        // ── Boot ──────────────────────────────────────────────────────────────
+        document.addEventListener("DOMContentLoaded", () => {
+            initMap();
+            startPolling(onUpdate);
+        });
+    </script>
+</body>
+
+</html>

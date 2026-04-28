@@ -23,20 +23,25 @@ def create_app():
     # Allow all origins (tighten to specific origin in production)
     CORS(app, resources={r"/*": {"origins": "*"}})
 
-    # Register API blueprint — all routes available at /data, /predict, /health
+    # Register API blueprint — routes: /data, /sensor/N3, /predict, /health
     app.register_blueprint(api)
 
-    # Optional: serve the frontend dashboard from Flask
-    # (useful when running everything from a single server)
-    DASHBOARD_DIR = Path(__file__).parent.parent / "dashboard"
+    # Serve the frontend/dashboard folder from Flask
+    # Looks for   project/dashboard/   relative to this file's parent
+    FRONTEND_DIR = Path(__file__).parent.parent / "dashboard"
 
-    @app.route("/")
-    def serve_index():
-        return send_from_directory(str(DASHBOARD_DIR), "index.html")
+    if FRONTEND_DIR.exists():
+        @app.route("/")
+        def serve_index():
+            return send_from_directory(str(FRONTEND_DIR), "index.html")
 
-    @app.route("/<path:filename>")
-    def serve_static(filename):
-        return send_from_directory(str(DASHBOARD_DIR), filename)
+        @app.route("/<path:filename>")
+        def serve_static(filename):
+            return send_from_directory(str(FRONTEND_DIR), filename)
+    else:
+        @app.route("/")
+        def serve_index():
+            return "Flask backend running. Frontend folder not found.", 200
 
     return app
 

@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FloodWatch — SOS Tracking</title>
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+</head>
+
+<body>
+
+    <!-- Navigation -->
+    <nav class="nav">
+        <div class="nav-brand">
+            <div class="brand-icon">🌊</div>
+            <span class="brand-name">FloodWatch</span>
+        </div>
+        <div class="nav-links">
+            <a class="nav-link" href="index.html">Home</a>
+            <a class="nav-link" href="dashboard.html">Dashboard</a>
+            <a class="nav-link" href="map.html">Map</a>
+            <a class="nav-link" href="analytics.html">Analytics</a>
+            <a class="nav-link active" href="sos.html">SOS Tracking</a>
+        </div>
+        <div class="nav-status">
+            <div id="status-dot" class="status-dot"></div>
+            <span id="status-text">Connecting…</span>
+        </div>
+    </nav>
+
+    <div class="page">
+        <div class="page-header">
+            <div>
+                <div class="page-title">Emergency SOS Tracking</div>
+                <div class="page-subtitle">Real-time location tracking of SOS emergency modules</div>
+            </div>
+            <div class="timestamp" id="last-updated">—</div>
+        </div>
+
+        <!-- Status Overview -->
+        <div class="metrics-row">
+            <div class="metric-card">
+                <div class="metric-label">Active SOS Devices</div>
+                <div class="metric-value" id="sos-count">0</div>
+                <div class="metric-sub">Currently broadcasting</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Total SOS Modules</div>
+                <div class="metric-value">15</div>
+                <div class="metric-sub">Installed across nodes</div>
+            </div>
+            <div class="metric-card red" id="emergency-card" style="display:none">
+                <div class="metric-label">🚨 EMERGENCY ALERT</div>
+                <div class="metric-value" id="emergency-node">—</div>
+                <div class="metric-sub">Activation timestamp: <span id="emergency-time">—</span></div>
+            </div>
+        </div>
+
+        <!-- Main Content Grid -->
+        <div class="sos-grid">
+            <!-- Left: Map -->
+            <div class="panel">
+                <div class="panel-header">
+                    <span class="panel-title">LIVE LOCATION MAP</span>
+                    <span class="badge badge-blue" id="map-badge">● LIVE</span>
+                </div>
+                <div class="panel-body" style="padding:0;height:500px">
+                    <div id="sos-map" style="width:100%;height:100%;border-radius:0 0 8px 0;"></div>
+                </div>
+            </div>
+
+            <!-- Right: SOS Devices List -->
+            <div>
+                <!-- SOS Activation Panel -->
+                <div class="panel"
+                    style="margin-bottom:20px;background:linear-gradient(135deg,rgba(239,68,68,0.05),rgba(239,68,68,0.02))">
+                    <div class="panel-header" style="border-bottom:1px solid rgba(239,68,68,0.1)">
+                        <span class="panel-title">ACTIVATE SOS DEVICE</span>
+                    </div>
+                    <div class="panel-body">
+                        <div style="margin-bottom:12px">
+                            <label
+                                style="display:block;font-size:11px;color:var(--text-secondary);margin-bottom:6px;font-weight:600">
+                                Select Node:
+                            </label>
+                            <select id="sos-node-select"
+                                style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--bg-base);color:var(--text-primary);font-size:12px">
+                                <option value="">-- Select a node --</option>
+                            </select>
+                        </div>
+                        <button id="activate-sos-btn"
+                            style="width:100%;padding:12px;background:#ef4444;color:white;border:none;border-radius:6px;font-weight:600;cursor:pointer;font-size:13px;transition:all 0.2s;box-shadow:0 2px 8px rgba(239,68,68,0.2)">
+                            🚨 ACTIVATE SOS SIGNAL
+                        </button>
+                        <div style="margin-top:8px;font-size:10px;color:var(--text-secondary);text-align:center">
+                            Only use during emergency situations
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Active SOS Devices -->
+                <div class="panel">
+                    <div class="panel-header">
+                        <span class="panel-title">ACTIVE SOS MODULES</span>
+                        <span class="badge badge-red" id="active-badge" style="display:none">0</span>
+                    </div>
+                    <div class="panel-body" style="padding:12px;max-height:350px;overflow-y:auto">
+                        <div id="sos-list">
+                            <div class="alert-empty">
+                                <div class="checkmark">✓</div>
+                                No active SOS signals
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- All SOS Modules Status -->
+                <div class="panel" style="margin-top:20px">
+                    <div class="panel-header">
+                        <span class="panel-title">ALL SOS MODULES</span>
+                    </div>
+                    <div class="panel-body" style="overflow-x:auto">
+                        <table style="width:100%;border-collapse:collapse;font-size:11px" id="sos-modules-table">
+                            <thead>
+                                <tr>
+                                    <th
+                                        style="text-align:left;padding:8px 12px;color:var(--text-secondary);font-weight:600;border-bottom:1px solid var(--border)">
+                                        Node</th>
+                                    <th
+                                        style="padding:8px 12px;color:var(--text-secondary);font-weight:600;border-bottom:1px solid var(--border)">
+                                        Module ID</th>
+                                    <th
+                                        style="text-align:center;padding:8px 12px;color:var(--text-secondary);font-weight:600;border-bottom:1px solid var(--border)">
+                                        Status</th>
+                                    <th
+                                        style="text-align:center;padding:8px 12px;color:var(--text-secondary);font-weight:600;border-bottom:1px solid var(--border)">
+                                        Battery</th>
+                                    <th
+                                        style="text-align:center;padding:8px 12px;color:var(--text-secondary);font-weight:600;border-bottom:1px solid var(--border)">
+                                        Signal</th>
+                                </tr>
+                            </thead>
+                            <tbody id="modules-table-body">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+    <script src="app.js"></script>
+    <script>
+        let sosMap = null;
+        let sosMarkers = {};
+        const CHENNAI_CENTER = [13.0827, 80.2707];
+        const NODE_LOCATIONS = {
+            "N1": { lat: 13.0827, lng: 80.2707, area: "Central Chennai" },
+            "N2": { lat: 13.0033, lng: 80.2675, area: "Adyar Estuary" },
+            "N3": { lat: 12.7870, lng: 80.2211, area: "Kelambakkam" },
+            "N4": { lat: 13.0776, lng: 80.2570, area: "Napier Park" },
+            "N5": { lat: 13.0186, lng: 80.2868, area: "Foreshore Estate" },
+            "N6": { lat: 13.0962, lng: 80.2288, area: "Kailasanathar" },
+            "N7": { lat: 13.0373, lng: 80.2123, area: "Ashok Nagar" },
+            "N8": { lat: 13.1162, lng: 80.2320, area: "Perambur" },
+            "N9": { lat: 13.0325, lng: 80.2696, area: "Mylapore" },
+            "N10": { lat: 13.0237, lng: 80.2282, area: "Saidapet" },
+            "N11": { lat: 13.0069, lng: 80.2668, area: "Elliot's Beach" },
+            "N12": { lat: 13.0586, lng: 80.2756, area: "Thiruvallikkeni" },
+            "N13": { lat: 13.0495, lng: 80.2562, area: "Cathedral Road" },
+            "N14": { lat: 13.1586, lng: 80.3027, area: "Kaladipet" },
+            "N15": { lat: 13.0330, lng: 80.2785, area: "San Thome" }
+        };
+
+        // Active SOS devices tracker
+        let activeSOS = {};
+
+        function getSosLocationForNode(node) {
+            if (node === "N3" && state.latestSosData?.is_live && state.latestSosData?.lat != null && state.latestSosData?.lon != null) {
+                return {
+                    lat: state.latestSosData.lat,
+                    lng: state.latestSosData.lon,
+                    area: `${NODE_LOCATIONS[node].area} (Live SOS)`
+                };
+            }
+            return NODE_LOCATIONS[node];
+        }
+
+        // ── Initialize SOS Map ────────────────────────────────────────────────
+        function initSOSMap() {
+            sosMap = L.map('sos-map').setView(CHENNAI_CENTER, 13);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors',
+                maxZoom: 19
+            }).addTo(sosMap);
+
+            // Add passive node markers
+            NODES.forEach(node => {
+                const loc = getSosLocationForNode(node);
+                if (!loc) return;
+
+                const markerEl = document.createElement('div');
+                markerEl.style.cssText = `
+          width:32px;height:32px;
+          background:#94a3b8;
+          border:2px solid white;
+          border-radius:50%;
+          display:flex;align-items:center;justify-content:center;
+          font-weight:600;color:white;font-size:11px;
+          opacity:0.6;
+          box-shadow:0 2px 6px rgba(0,0,0,0.2);
+        `;
+                markerEl.textContent = node;
+
+                L.marker([loc.lat, loc.lng], {
+                    icon: L.divIcon({
+                        html: markerEl,
+                        iconSize: [32, 32],
+                        className: 'sos-marker'
+                    })
+                }).bindPopup(`<strong>${node}</strong><br/><small>${loc.area}</small>`).addTo(sosMap);
+            });
+        }
+
+        // ── Populate SOS node selector ────────────────────────────────────────
+        function populateNodeSelector() {
+            const select = document.getElementById("sos-node-select");
+            NODES.forEach(node => {
+                const option = document.createElement("option");
+                option.value = node;
+                option.textContent = `${node} - ${NODE_LOCATIONS[node].area}`;
+                select.appendChild(option);
+            });
+        }
+
+        // ── Activate SOS ──────────────────────────────────────────────────────
+        function activateSOS() {
+            const node = document.getElementById("sos-node-select").value;
+            if (!node) {
+                alert("Please select a node first");
+                return;
+            }
+
+            const now = new Date();
+            const liveLoc = getSosLocationForNode(node);
+            activeSOS[node] = {
+                activated: now.getTime(),
+                node: node,
+                location: liveLoc,
+                battery: node === "N3" && state.latestSosData?.battery != null
+                    ? state.latestSosData.battery
+                    : 95 + Math.random() * 5,
+                signal: "Strong",
+                messageCount: 0
+            };
+
+            updateSOSDisplay();
+            flashSOSMarker(node);
+            showEmergencyAlert(node, now);
+        }
+
+        // ── Flash SOS marker on map ───────────────────────────────────────────
+        function flashSOSMarker(node) {
+            const loc = getSosLocationForNode(node);
+            if (!loc) return;
+
+            if (sosMarkers[node]) {
+                sosMap.removeLayer(sosMarkers[node]);
+            }
+
+            const pulseIcon = L.divIcon({
+                html: `
+          <div style="
+            width:48px;height:48px;
+            background:radial-gradient(circle,#ef4444,rgba(239,68,68,0));
+            border:3px solid #ef4444;
+            border-radius:50%;
+            display:flex;align-items:center;justify-content:center;
+            font-weight:700;color:white;font-size:12px;
+            box-shadow:0 0 20px #ef4444,0 0 40px rgba(239,68,68,0.3);
+            animation:pulse 1s infinite;
+          " id="sos-pulse-${node}">
+            🚨
+          </div>
+          <style>
+            @keyframes pulse {
+              0%,100% { transform:scale(1);opacity:1; }
+              50% { transform:scale(1.2);opacity:0.7; }
+            }
+          </style>
+        `,
+                iconSize: [48, 48],
+                className: 'sos-pulse'
+            });
+
+            const marker = L.marker([loc.lat, loc.lng], { icon: pulseIcon }).addTo(sosMap);
+            sosMarkers[node] = marker;
+            sosMap.setView([loc.lat, loc.lng], 15);
+        }
+
+        // ── Show emergency alert ──────────────────────────────────────────────
+        function showEmergencyAlert(node, time) {
+            const card = document.getElementById("emergency-card");
+            const nodeEl = document.getElementById("emergency-node");
+            const timeEl = document.getElementById("emergency-time");
+
+            card.style.display = "flex";
+            const loc = getSosLocationForNode(node);
+            nodeEl.textContent = `${node} - ${loc.area}`;
+            timeEl.textContent = formatTime(time);
+
+            // Play sound alert (optional)
+            playAlert();
+        }
+
+        // ── Play alert sound (optional) ───────────────────────────────────────
+        function playAlert() {
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+
+                oscillator.frequency.value = 800;
+                oscillator.type = 'sine';
+
+                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.5);
+            } catch (e) {
+                // Audio not supported
+            }
+        }
+
+        // ── Update SOS display ────────────────────────────────────────────────
+        function updateSOSDisplay() {
+            const count = Object.keys(activeSOS).length;
+            document.getElementById("sos-count").textContent = count;
+
+            const badge = document.getElementById("active-badge");
+            if (count > 0) {
+                badge.textContent = count;
+                badge.style.display = "inline-block";
+            } else {
+                badge.style.display = "none";
+            }
+
+            // Update active SOS list
+            const sosList = document.getElementById("sos-list");
+            if (count === 0) {
+                sosList.innerHTML = `<div class="alert-empty"><div class="checkmark">✓</div>No active SOS signals</div>`;
+            } else {
+                sosList.innerHTML = Object.entries(activeSOS).map(([node, data]) => {
+                    const elapsed = Math.floor((Date.now() - data.activated) / 1000);
+                    return `
+            <div class="alert-item RED" style="margin-bottom:10px">
+              <div class="alert-dot"></div>
+              <div style="flex:1">
+                <strong>${node}</strong> — 🚨 ACTIVE<br/>
+                <small style="opacity:0.7">${data.location.area}</small><br/>
+                <small style="opacity:0.7">Active for ${elapsed}s · Battery: ${data.battery.toFixed(0)}%</small>
+              </div>
+              <button onclick="deactivateSOS('${node}')" style="padding:4px 8px;background:#ef4444;color:white;border:none;border-radius:4px;font-size:10px;font-weight:600;cursor:pointer">
+                Clear
+              </button>
+            </div>
+          `;
+                }).join("");
+            }
+
+            // Update modules table
+            updateModulesTable();
+        }
+
+        // ── Deactivate SOS ────────────────────────────────────────────────────
+        function deactivateSOS(node) {
+            delete activeSOS[node];
+            if (sosMarkers[node]) {
+                sosMap.removeLayer(sosMarkers[node]);
+                delete sosMarkers[node];
+            }
+            if (Object.keys(activeSOS).length === 0) {
+                document.getElementById("emergency-card").style.display = "none";
+            }
+            updateSOSDisplay();
+        }
+
+        // ── Update modules table ──────────────────────────────────────────────
+        function updateModulesTable() {
+            const tbody = document.getElementById("modules-table-body");
+            const rows = NODES.map(node => {
+                const isActive = activeSOS[node] ? "Active" : "Standby";
+                const bgColor = activeSOS[node] ? "rgba(239,68,68,0.05)" : "";
+                const battery = activeSOS[node] ? activeSOS[node].battery : (75 + Math.random() * 25);
+
+                return `
+          <tr style="background:${bgColor};border-bottom:1px solid var(--border)">
+            <td style="padding:8px 12px;font-weight:600;color:var(--text-primary)">${node}</td>
+            <td style="padding:8px 12px;font-family:monospace;color:var(--text-secondary);font-size:10px">SOS-${node.substring(1).padStart(2, '0')}</td>
+            <td style="padding:8px 12px;text-align:center">
+              <span style="padding:2px 6px;border-radius:3px;font-size:10px;font-weight:600;${activeSOS[node]
+                        ? 'background:rgba(239,68,68,0.2);color:#ef4444'
+                        : 'background:rgba(34,197,94,0.2);color:#22c55e'
+                    }">${isActive}</span>
+            </td>
+            <td style="padding:8px 12px;text-align:center;font-family:monospace;color:var(--text-secondary)">${battery.toFixed(0)}%</td>
+            <td style="padding:8px 12px;text-align:center;color:var(--text-secondary);font-size:10px">Strong</td>
+          </tr>
+        `;
+            }).join("");
+            tbody.innerHTML = rows;
+        }
+
+        // ── Main update callback ──────────────────────────────────────────────
+        function onUpdate(preds) {
+            if (state.latestSosData?.is_live && state.latestSosData?.active) {
+                const now = Date.now();
+                activeSOS["N3"] = {
+                    activated: activeSOS["N3"]?.activated || now,
+                    node: "N3",
+                    location: getSosLocationForNode("N3"),
+                    battery: state.latestSosData.battery ?? activeSOS["N3"]?.battery ?? 100,
+                    signal: "Strong",
+                    messageCount: activeSOS["N3"]?.messageCount || 0
+                };
+                flashSOSMarker("N3");
+                showEmergencyAlert("N3", new Date(activeSOS["N3"].activated));
+            } else if (activeSOS["N3"] && (!state.latestSosData || !state.latestSosData.is_live || state.latestSosData.active === false)) {
+                deactivateSOS("N3");
+            }
+
+            setNavStatus(true);
+            updateSOSDisplay();
+            document.getElementById("last-updated").textContent = `Updated: ${formatTime(new Date())}`;
+        }
+
+        // ── Boot ──────────────────────────────────────────────────────────────
+        document.addEventListener("DOMContentLoaded", () => {
+            initSOSMap();
+            populateNodeSelector();
+            updateModulesTable();
+
+            // Activate SOS button
+            document.getElementById("activate-sos-btn").addEventListener("click", activateSOS);
+
+            startPolling(onUpdate);
+        });
+    </script>
+</body>
+
+</html>
