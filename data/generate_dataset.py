@@ -36,7 +36,7 @@ TIME_INTERVAL   = 10           # minutes between readings
 START_TIME      = datetime(2026, 4, 27)
 
 SAFE_MAX    = 25.0
-WARNING_MAX = 35.0
+WARNING_MAX = 100.0
 
 NODES = [f"N{i}" for i in range(1, NUM_NODES + 1)]
 
@@ -57,9 +57,9 @@ OUTPUT_PATH = Path(__file__).parent / "dataset.json"
 # Node offset of +-8 cm means the 15 nodes will naturally straddle thresholds.
 PHASES = [
     dict(center=14.0, rain=1.5),   # Phase 0: dry      -> SAFE
-    dict(center=30.0, rain=6.5),   # Phase 1: rising   -> WARNING (some FLOOD)
-    dict(center=45.0, rain=12.0),  # Phase 2: flood    -> FLOOD (some WARNING)
-    dict(center=30.0, rain=3.0),   # Phase 3: draining -> WARNING (some FLOOD)
+    dict(center=30.0, rain=6.5),   # Phase 1: rising   -> WARNING
+    dict(center=68.0, rain=12.0),  # Phase 2: flood    -> WARNING (some FLOOD)
+    dict(center=30.0, rain=3.0),   # Phase 3: draining -> WARNING
     dict(center=14.0, rain=1.5),   # Phase 4: recovery -> SAFE
 ]
 
@@ -110,7 +110,7 @@ def simulate():
             prev_wl = water[n]
             new_wl  = prev_wl + lerp_speed[n] * (target - prev_wl)
             new_wl += random.gauss(0, 0.01)          # small noise
-            new_wl  = max(4.0, min(70.0, new_wl))   # absolute clamp
+            new_wl  = max(4.0, min(95.0, new_wl))   # absolute clamp
 
             rate_of_rise = round(new_wl - prev_wl, 3)
             water[n]     = new_wl

@@ -25,7 +25,7 @@ SEQ_LEN = 6
 LIVE_SENSOR_TIMEOUT_SEC = 15
 NODES = [f"N{i}" for i in range(1, 16)]
 SAFE_MAX_WL = 25.0
-WARNING_MAX_WL = 35.0
+WARNING_MAX_WL = 100.0
 
 _latest_data = []
 _dataset_cursor = 0
@@ -231,6 +231,14 @@ def receive_sos_location():
     payload = request.get_json(silent=True)
     if payload is None:
         return jsonify({"error": "Invalid or missing JSON body"}), 400
+
+    # Alias hardware fields to internal names
+    if "latitude" in payload and "lat" not in payload:
+        payload["lat"] = payload["latitude"]
+    if "longitude" in payload and "lon" not in payload:
+        payload["lon"] = payload["longitude"]
+    if "battery_voltage" in payload and "battery" not in payload:
+        payload["battery"] = payload["battery_voltage"]
 
     err = _validate_sos_payload(payload)
     if err:

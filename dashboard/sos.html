@@ -178,6 +178,7 @@
 
         // Active SOS devices tracker
         let activeSOS = {};
+        let sosPassiveMarkers = {};
 
         function getSosLocationForNode(node) {
             if (node === "N3" && state.latestSosData?.is_live && state.latestSosData?.lat != null && state.latestSosData?.lon != null) {
@@ -217,13 +218,15 @@
         `;
                 markerEl.textContent = node;
 
-                L.marker([loc.lat, loc.lng], {
+                const marker = L.marker([loc.lat, loc.lng], {
                     icon: L.divIcon({
                         html: markerEl,
                         iconSize: [32, 32],
                         className: 'sos-marker'
                     })
                 }).bindPopup(`<strong>${node}</strong><br/><small>${loc.area}</small>`).addTo(sosMap);
+
+                sosPassiveMarkers[node] = marker;
             });
         }
 
@@ -422,6 +425,16 @@
 
         // ── Main update callback ──────────────────────────────────────────────
         function onUpdate(preds) {
+            // Update passive markers position
+            NODES.forEach(node => {
+                const loc = getSosLocationForNode(node);
+                const marker = sosPassiveMarkers[node];
+                if (marker) {
+                    marker.setLatLng([loc.lat, loc.lng]);
+                    marker.getPopup().setContent(`<strong>${node}</strong><br/><small>${loc.area}</small>`);
+                }
+            });
+
             if (state.latestSosData?.is_live && state.latestSosData?.active) {
                 const now = Date.now();
                 activeSOS["N3"] = {

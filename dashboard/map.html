@@ -108,6 +108,17 @@
             "N15": { lat: 13.0330, lng: 80.2785, area: "San Thome" }
         };
 
+        function getSosLocationForNode(node) {
+            if (node === "N3" && state.latestSosData?.is_live && state.latestSosData?.lat != null && state.latestSosData?.lon != null) {
+                return {
+                    lat: state.latestSosData.lat,
+                    lng: state.latestSosData.lon,
+                    area: `${NODE_LOCATIONS[node].area} (Live SOS)`
+                };
+            }
+            return NODE_LOCATIONS[node];
+        }
+
         // ── Initialize Map ────────────────────────────────────────────────────
         function initMap() {
             map = L.map('map').setView(CHENNAI_CENTER, 13);
@@ -165,8 +176,12 @@
         function updateNodeStatus(preds) {
             NODES.forEach(node => {
                 const status = preds[node] || "UNKNOWN";
-                const marker = markers[node];
-                if (!marker) return;
+                const markerObj = markers[node];
+                if (!markerObj) return;
+
+                // Move marker if live SOS overrides location
+                const loc = getSosLocationForNode(node);
+                markerObj.marker.setLatLng([loc.lat, loc.lng]);
 
                 // Update marker color
                 let bgColor = "#38bdf8"; // Blue for unknown
@@ -192,7 +207,7 @@
         function updateNodesListTable(preds) {
             const tbody = document.getElementById("nodes-list");
             const rows = NODES.map(node => {
-                const loc = NODE_LOCATIONS[node];
+                const loc = getSosLocationForNode(node);
                 const status = preds[node] || "UNKNOWN";
                 const snap = generateMockSnapshot()[node];
                 const rowBg = status === "RED" ? "rgba(239,68,68,0.05)" : status === "YELLOW" ? "rgba(234,179,8,0.05)" : "";

@@ -329,17 +329,17 @@ function generateMockSnapshot() {
 
     // RED (flood): high water/rain
     if (preds[node] === "RED") {
-      baseWL = 37 + Math.random() * 7;   // 37-44 cm
+      baseWL = 90 + Math.random() * 10;   // 90-100 cm
       baseRain = 24 + Math.random() * 24; // heavy rain
     }
     // YELLOW (warning): mid-high water, smaller rain
     else if (preds[node] === "YELLOW") {
-      baseWL = 28 + Math.random() * 8;   // 28-36 cm
+      baseWL = 60 + Math.random() * 30;   // 60-90 cm
       baseRain = 12 + Math.random() * 20;
     }
     // GREEN (safe): low water
     else {
-      baseWL = 7 + Math.random() * 14;   // 7-21 cm
+      baseWL = Math.random() * 60;   // 0-60 cm
       baseRain = Math.random() * 10;
     }
 
@@ -404,6 +404,18 @@ function startPolling(onUpdate) {
     // is unreachable or only serving placeholder/default snapshots.
     if (!sensorData || !hasUsableSensorData) sensorData = generateMockSnapshot();
     if (!preds || !hasUsableSensorData) preds = generateMockPredictions();
+
+    // Enforce water level thresholds on the frontend
+    if (sensorData) {
+      Object.keys(sensorData).forEach(node => {
+        const wl = sensorData[node].water_level;
+        if (wl !== undefined) {
+          if (wl <= 60) preds[node] = "GREEN";
+          else if (wl <= 90) preds[node] = "YELLOW";
+          else preds[node] = "RED";
+        }
+      });
+    }
 
     state.prevSensorData = state.latestSensorData;
     state.latestSensorData = sensorData;
